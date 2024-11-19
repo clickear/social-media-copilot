@@ -93,6 +93,23 @@ const Component = (props: {
   </>);
 };
 
+
+const getNoteCard = async (noteId) => {
+  try {
+    const search = new URLSearchParams(location.search);
+    const xsec_token = search.get("xsec_token");
+    if (!xsec_token) {
+      throw new Error("笔记信息获取失败，缺少xsec_token参数！");
+    }
+    const detail = await webV1Feed(noteId, search.get("source") || "pc_feed", xsec_token, ["jpg"])
+      .then(res => res.items?.[0]?.note_card);
+    return detail;
+  } catch (e: any) {
+    toast.error(e.message);
+    throw e;
+  }
+};
+
 export default defineInjectContentScriptUi({
   position: "inline",
   append: "after",
@@ -104,10 +121,14 @@ export default defineInjectContentScriptUi({
       name: "executeScript",
       body: "const noteId = location.pathname.split(\"/\")[2];return window[\"__INITIAL_STATE__\"]?.note?.noteDetailMap[noteId];"
     });
+    console.log(res)
+    
     const noteId = location.pathname.split("/").reverse()[0];
     if (!noteId || noteId.length != 24) {
       return remove();
     }
+    const note = await getNoteCard(noteId);
+    console.log("noteDetail: "+JSON.stringify(note))
     const isVideo = !!document.querySelector('#noteContainer[data-type="video"]');
     mounted.render(<Component noteId={noteId} isVideo={isVideo} />);
   }
